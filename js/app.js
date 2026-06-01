@@ -2,6 +2,11 @@ const OLLAMA_URL = "http://localhost:11434/api/chat";
 const MODEL_NAME = "phi3";
 const MAX_CONTEXT_CHARS = 12000;
 
+const OLLAMA_OPTIONS = {
+  temperature: 0,
+  num_predict: 512
+};
+
 let conversationHistory = [];
 let currentContext = null;
 let currentContextName = null;
@@ -14,7 +19,20 @@ const btnSend = document.getElementById("btn-send");
 const typingIndicator = document.getElementById("typing-indicator");
 const contextBanner = document.getElementById("context-banner");
 const contextInfo = document.getElementById("context-info");
+const btnViewContext = document.getElementById("btn-view-context");
 const btnRemoveContext = document.getElementById("btn-remove-context");
+const contextModal = document.getElementById("context-modal");
+const contextModalTitle = document.getElementById("context-modal-title");
+const contextModalMeta = document.getElementById("context-modal-meta");
+const contextModalText = document.getElementById("context-modal-text");
+const btnCloseContextModal = document.getElementById("btn-close-context-modal");
+const contextModalBackdrop = document.getElementById("context-modal-backdrop");
+
+const CONTEXT_TYPE_LABELS = {
+  pdf: "Texto extraído do PDF",
+  audio: "Transcrição do áudio",
+  video: "Transcrição do vídeo"
+};
 
 function scrollToBottom() {
   chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -47,13 +65,16 @@ function hideTyping() {
 }
 
 function setContext(text, name, type) {
-  const trimmed = text.length > MAX_CONTEXT_CHARS
+  const wasTruncated = text.length > MAX_CONTEXT_CHARS;
+  const trimmed = wasTruncated
     ? text.substring(0, MAX_CONTEXT_CHARS) + "\n...[texto truncado]"
     : text;
 
   currentContext = trimmed;
   currentContextName = name;
   currentContextType = type;
+  conversationHistory = [];
+  closeContextModal();
 
   const icons = { pdf: "\u{1F4C4}", audio: "\u{1F3A7}", video: "\u{1F3AC}" };
   const icon = icons[type] || "\u{1F4CE}";
@@ -61,7 +82,33 @@ function setContext(text, name, type) {
   contextBanner.classList.add("active");
   contextInfo.innerHTML = `<strong>${icon} ${name}</strong> \u2014 ${trimmed.length.toLocaleString()} caracteres carregados como contexto`;
 
-  addSystemMessage(`${icon} Arquivo "${name}" carregado como contexto.`);
+  addSystemMessage(`${icon} Arquivo "${name}" carregado como contexto. Clique em "Ver texto" para conferir a transcrição.`);
+}
+
+function openContextModal() {
+  if (!currentContext) return;
+
+  const typeLabel = CONTEXT_TYPE_LABELS[currentContextType] || "Conteúdo do arquivo";
+  const icon = { pdf: "\u{1F4C4}", audio: "\u{1F3A7}", video: "\u{1F3AC}" }[currentContextType] || "\u{1F4CE}";
+
+  contextModalTitle.textContent = `${icon} ${currentContextName || "Arquivo"}`;
+  contextModalMeta.textContent =
+    `${typeLabel} \u2022 ${currentContext.length.toLocaleString()} caracteres` +
+    (currentContext.endsWith("\n...[texto truncado]")
+      ? " \u2022 exibindo apenas o início (limite do assistente)"
+      : "");
+  contextModalText.textContent = currentContext;
+
+  contextModal.classList.add("active");
+  contextModal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  btnCloseContextModal.focus();
+}
+
+function closeContextModal() {
+  contextModal.classList.remove("active");
+  contextModal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
 }
 
 function removeContext() {
@@ -69,6 +116,7 @@ function removeContext() {
   currentContextName = null;
   currentContextType = null;
   contextBanner.classList.remove("active");
+  closeContextModal();
   addSystemMessage("Contexto removido.");
 }
 
@@ -78,18 +126,34 @@ function clearChat() {
   addSystemMessage("Conversa iniciada. Digite sua pergunta abaixo.");
 }
 
+function buildContextSystemPrompt() {
+  const source = currentContextName || "arquivo carregado";
+  return (
+    "Você responde perguntas usando EXCLUSIVAMENTE o texto abaixo (transcrição ou documento).\n\n" +
+    "Regras obrigatórias:\n" +
+    "- Use somente informações explícitas no texto; não invente dados.\n" +
+    '- Se a informação não estiver no texto, responda apenas: "Não consta no contexto fornecido."\n' +
+    "- Responda em português, de forma direta e curta.\n" +
+    "- Não escreva diálogos, narrativas, personagens ou texto criativo.\n" +
+    "- Não repita o texto inteiro nem adicione novos trechos de contexto.\n\n" +
+    `TEXTO DE REFERÊNCIA (${source}):\n${currentContext}`
+  );
+}
+
 function buildMessages(userText) {
   const messages = [];
 
   if (currentContext) {
-    messages.push({
-      role: "system",
-      content: `Use o seguinte conteúdo como contexto para responder às perguntas do usuário. Responda sempre em português.\n\n--- INÍCIO DO CONTEXTO ---\n${currentContext}\n--- FIM DO CONTEXTO ---`
-    });
-  }
-
-  for (const msg of conversationHistory) {
-    messages.push({ role: msg.role, content: msg.content });
+    messages.push({ role: "system", content: buildContextSystemPrompt() });
+    for (const msg of conversationHistory) {
+      if (msg.role === "user") {
+        messages.push({ role: msg.role, content: msg.content });
+      }
+    }
+  } else {
+    for (const msg of conversationHistory) {
+      messages.push({ role: msg.role, content: msg.content });
+    }
   }
 
   messages.push({ role: "user", content: userText });
@@ -107,7 +171,6 @@ async function sendMessage() {
   userInput.style.height = "auto";
 
   addMessage("user", text);
-  conversationHistory.push({ role: "user", content: text });
 
   showTyping();
 
@@ -121,7 +184,8 @@ async function sendMessage() {
       body: JSON.stringify({
         model: MODEL_NAME,
         messages: buildMessages(text),
-        stream: true
+        stream: true,
+        options: OLLAMA_OPTIONS
       })
     });
 
@@ -155,6 +219,7 @@ async function sendMessage() {
       }
     }
 
+    conversationHistory.push({ role: "user", content: text });
     conversationHistory.push({ role: "assistant", content: fullResponse });
 
   } catch (err) {
@@ -181,6 +246,15 @@ userInput.addEventListener("input", () => {
 });
 
 btnSend.addEventListener("click", sendMessage);
+btnViewContext.addEventListener("click", openContextModal);
 btnRemoveContext.addEventListener("click", removeContext);
+btnCloseContextModal.addEventListener("click", closeContextModal);
+contextModalBackdrop.addEventListener("click", closeContextModal);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && contextModal.classList.contains("active")) {
+    closeContextModal();
+  }
+});
 
 addSystemMessage("Conversa iniciada. Digite sua pergunta abaixo.");

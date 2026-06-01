@@ -98,8 +98,114 @@ header h1 span {
   transition: background 0.2s;
 }
 
+.context-banner .btn-view-context {
+  background: var(--bg-chat);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: border-color 0.2s, background 0.2s;
+  flex-shrink: 0;
+}
+
+.context-banner .btn-view-context:hover {
+  border-color: var(--accent);
+  background: rgba(108, 99, 255, 0.12);
+}
+
 .context-banner .btn-remove-context:hover {
   background: rgba(231, 76, 60, 0.15);
+}
+
+.context-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.context-modal.active {
+  display: flex;
+}
+
+.context-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.context-modal-dialog {
+  position: relative;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: min(720px, 100%);
+  max-height: min(85vh, 640px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+.context-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.context-modal-header h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.btn-close-context-modal {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.btn-close-context-modal:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.context-modal-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  padding: 0.65rem 1.25rem 0;
+  flex-shrink: 0;
+}
+
+.context-modal-body {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem 1.25rem 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.context-modal-body pre {
+  font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 #chat-messages {
@@ -335,5 +441,18 @@ header h1 span {
 
   .input-area {
     padding: 0.75rem 1rem;
+  }
+
+  .context-banner {
+    padding: 0.5rem 1rem;
+    flex-wrap: wrap;
+  }
+
+  .context-modal {
+    padding: 0.5rem;
+  }
+
+  .context-modal-dialog {
+    max-height: 92vh;
   }
 }

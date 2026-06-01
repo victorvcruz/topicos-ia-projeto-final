@@ -21,7 +21,8 @@
   <div id="context-banner" class="context-banner">
     <span class="context-icon">&#128206;</span>
     <span id="context-info" class="context-info"></span>
-    <button id="btn-remove-context" class="btn-remove-context" title="Remover contexto">&times;</button>
+    <button id="btn-view-context" class="btn-view-context" type="button" title="Ver texto transcrito ou extraído">Ver texto</button>
+    <button id="btn-remove-context" class="btn-remove-context" type="button" title="Remover contexto">&times;</button>
   </div>
 
   <div id="chat-messages">
@@ -48,6 +49,20 @@
       </div>
       <textarea id="user-input" rows="1" placeholder="Digite sua mensagem..."></textarea>
       <button id="btn-send" title="Enviar">&#10148;</button>
+    </div>
+  </div>
+
+  <div id="context-modal" class="context-modal" aria-hidden="true">
+    <div class="context-modal-backdrop" id="context-modal-backdrop"></div>
+    <div class="context-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="context-modal-title">
+      <div class="context-modal-header">
+        <h2 id="context-modal-title">Contexto</h2>
+        <button id="btn-close-context-modal" class="btn-close-context-modal" type="button" title="Fechar">&times;</button>
+      </div>
+      <p id="context-modal-meta" class="context-modal-meta"></p>
+      <div class="context-modal-body">
+        <pre id="context-modal-text"></pre>
+      </div>
     </div>
   </div>
 

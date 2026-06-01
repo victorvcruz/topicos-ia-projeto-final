@@ -12,6 +12,13 @@ WHISPER_MODEL_NAME = os.environ.get("WHISPER_MODEL", "small")
 
 _whisper_model = None
 
+WHISPER_TRANSCRIBE_KWARGS = {
+    "language": "pt",
+    "task": "transcribe",
+    "fp16": False,
+    "condition_on_previous_text": False,
+}
+
 
 def get_whisper_model():
     global _whisper_model
@@ -21,6 +28,12 @@ def get_whisper_model():
         _whisper_model = whisper.load_model(WHISPER_MODEL_NAME)
         print("Modelo Whisper carregado.")
     return _whisper_model
+
+
+def transcribe_file(path):
+    model = get_whisper_model()
+    result = model.transcribe(path, **WHISPER_TRANSCRIBE_KWARGS)
+    return result["text"].strip()
 
 
 @app.route("/")
@@ -45,9 +58,8 @@ def transcribe_audio():
     try:
         file.save(tmp.name)
         tmp.close()
-        model = get_whisper_model()
-        result = model.transcribe(tmp.name)
-        return jsonify({"text": result["text"]})
+        text = transcribe_file(tmp.name)
+        return jsonify({"text": text})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -83,9 +95,8 @@ def transcribe_video():
         if result.returncode != 0:
             return jsonify({"error": f"FFmpeg falhou: {result.stderr[-500:]}"}), 500
 
-        model = get_whisper_model()
-        transcription = model.transcribe(audio_tmp.name)
-        return jsonify({"text": transcription["text"]})
+        text = transcribe_file(audio_tmp.name)
+        return jsonify({"text": text})
 
     except FileNotFoundError:
         return jsonify({
